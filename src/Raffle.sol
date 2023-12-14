@@ -14,6 +14,7 @@ contract Raffle is VRFConsumerBaseV2 {
      * Errors
      */
     error Raffle__NotEnoughEthSent();
+    error Raffle__TransferFailed();
 
     /**
      * State variables
@@ -30,6 +31,7 @@ contract Raffle is VRFConsumerBaseV2 {
 
     address payable[] private s_players;
     uint256 private s_lastTimestamp;
+    address private s_recentWinner;
 
     /**
      * Events
@@ -71,7 +73,15 @@ contract Raffle is VRFConsumerBaseV2 {
         );
     }
 
-    function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {}
+    function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
+        uint256 indexOfWinner = randomWords[0] % s_players.length;
+        address payable winner = s_players[indexOfWinner];
+        s_recentWinner = winner;
+        (bool success,) = winner.call{value: address(this).balance}("");
+        if (!success) {
+            revert Raffle__TransferFailed();
+        }
+    }
 
     /**
      * Getter functions
