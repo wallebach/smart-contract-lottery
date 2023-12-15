@@ -15,6 +15,15 @@ contract Raffle is VRFConsumerBaseV2 {
      */
     error Raffle__NotEnoughEthSent();
     error Raffle__TransferFailed();
+    error Raffle__RaffleNotOpen();
+
+    /**
+     * Type declarations
+     */
+    enum RaffleState {
+        OPEN,
+        CALCULATING
+    }
 
     /**
      * State variables
@@ -32,6 +41,7 @@ contract Raffle is VRFConsumerBaseV2 {
     address payable[] private s_players;
     uint256 private s_lastTimestamp;
     address private s_recentWinner;
+    RaffleState private s_raffleState;
 
     /**
      * Events
@@ -52,11 +62,18 @@ contract Raffle is VRFConsumerBaseV2 {
         i_gasLane = gasLane;
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
+
+        s_raffleState = RaffleState.OPEN;
+        s_lastTimestamp = block.timestamp;
     }
 
     function enterRaffle() public payable {
         if (msg.value < i_entranceFee) {
             revert Raffle__NotEnoughEthSent();
+        }
+
+        if (s_raffleState != RaffleState.OPEN) {
+            revert Raffle__RaffleNotOpen();
         }
         s_lastTimestamp = block.timestamp;
         s_players.push(payable(msg.sender));
@@ -67,6 +84,7 @@ contract Raffle is VRFConsumerBaseV2 {
         if ((block.timestamp - s_lastTimestamp) < i_interval) {
             revert();
         }
+        s_raffleState = RaffleState.CALCULATING;
 
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane, i_subscriptionId, REQUEST_CONFIRMATIONS, i_callbackGasLimit, NUM_WORDS
@@ -77,6 +95,7 @@ contract Raffle is VRFConsumerBaseV2 {
         uint256 indexOfWinner = randomWords[0] % s_players.length;
         address payable winner = s_players[indexOfWinner];
         s_recentWinner = winner;
+        s_raffleState = RaffleState.OPEN;
         (bool success,) = winner.call{value: address(this).balance}("");
         if (!success) {
             revert Raffle__TransferFailed();
