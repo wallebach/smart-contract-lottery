@@ -7,6 +7,8 @@ import {Test, console} from "forge-std/Test.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 
 contract RaffleTest is Test {
+    event EnteredRaffle(address indexed player);
+
     Raffle raffle;
     HelperConfig helperConfig;
 
@@ -52,5 +54,12 @@ contract RaffleTest is Test {
         address playerRecorded = raffle.getPlayer(0);
 
         assertEq(playerRecorded, PLAYER);
+    }
+
+    function testEmitsEventOnEntrance() public {
+        vm.prank(PLAYER);
+        vm.expectEmit(true, false, false, false, address(raffle));
+        emit EnteredRaffle(PLAYER);
+        raffle.enterRaffle{value: entranceFee}();
     }
 }
