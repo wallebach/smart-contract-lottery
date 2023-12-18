@@ -3,6 +3,7 @@ pragma solidity ^0.8.18;
 
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import {console} from "forge-std/console.sol";
 
 /**
  * @title Sample Raffle Contract
@@ -83,8 +84,8 @@ contract Raffle is VRFConsumerBaseV2 {
         if (s_raffleState != RaffleState.OPEN) {
             revert Raffle__RaffleNotOpen();
         }
-        s_lastTimestamp = block.timestamp;
         s_players.push(payable(msg.sender));
+
         emit EnteredRaffle(msg.sender);
     }
 
@@ -126,6 +127,15 @@ contract Raffle is VRFConsumerBaseV2 {
         bool isOpen = RaffleState.OPEN == s_raffleState;
         bool hasBalance = address(this).balance > 0;
         bool hasPlayers = s_players.length > 0;
+        console.log(
+            "blocktimestamp %s, s_lasttimestamp %s, i_interval %s: ",
+            block.timestamp,
+            s_lastTimestamp,
+            i_interval
+        );
+        console.log("isOpen: ", isOpen);
+        console.log("hasBalance: ", hasBalance);
+        console.log("hasPlayers: ", hasPlayers);
         upkeepNeeded = timeHasPassed && isOpen && hasBalance && hasPlayers;
         return (upkeepNeeded, "0x0");
     }
@@ -162,5 +172,17 @@ contract Raffle is VRFConsumerBaseV2 {
 
     function getPlayer(uint256 indexOfPlayer) public view returns (address) {
         return s_players[indexOfPlayer];
+    }
+
+    function getRecentWinner() public view returns (address) {
+        return s_recentWinner;
+    }
+
+    function getLengthOfPlayers() public view returns (uint256) {
+        return s_players.length;
+    }
+
+    function getLastTimestamp() public view returns (uint256) {
+        return s_lastTimestamp;
     }
 }
